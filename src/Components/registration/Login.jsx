@@ -1,26 +1,78 @@
 import { useState} from "react";
 import { useNavigate } from "react-router-dom";
-// Make sure to import your Firebase auth functions if they are in a separate file
-// import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-// import { auth } from "./firebase-config"; // Example path to your firebase config
+
+const USERS_STORAGE_KEY = 'todo_app_users';
 
 const Login = ({ setUser, setUserRole }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isNewUser, setIsNewUser] = useState(false);
+
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState(""); 
+
   const navigate = useNavigate();
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage(""); 
+    setMessageType("");
+
     try {
+
+      const storedUsers = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY)) || [];
+      if (isNewUser) {
+        // Sign Up
+        const userExists = storedUsers.find(user => user.email === email);
+        if (userExists) {
+          setMessage("User with this email already exists. Please login or use a different email.");
+          setMessageType("error");
+          return;
+        }
+      
+        const newUser = { email, password }; // Storing password directly 
+        const updatedUsers = [...storedUsers, newUser];
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        
+        setMessage("Sign up successful! Please log in.");
+        setMessageType("success");
+        console.log("Sign Up successful for:", { email });
+        setIsNewUser(false); // Switch to login form
+        setEmail("");        
+        setPassword("");    
+
+      } else {
+        // Login
+        const user = storedUsers.find(user => user.email === email);
+        if (!user) {
+          setMessage("No user found with this email. Please sign up.");
+          setMessageType("error");
+          return;
+        }
+
       let userCredential;
       console.log("Form Submitted", { email, password, isNewUser });
       navigate("./Completed", { state: { user: userCredential } });
       
 
+
+        if (user.password !== password) { // password comparison 
+          setMessage("Incorrect password.");
+          setMessageType("error");
+          return;
+        }
+        
+        if (setUser) setUser(user); // Pass the logged-in user 
+        if (setUserRole) setUserRole("user"); 
+
+        console.log("Login successful for:", { email });
+        // hiding this Login
+      }
     } catch (error) {
       console.error("Error during authentication", error);
-      alert(error.message);
+      setMessage(`An error occurred: ${error.message || "Unknown error"}`);
+      setMessageType("error");
     }
   };
 
@@ -30,6 +82,17 @@ const Login = ({ setUser, setUserRole }) => {
         <h2 className="text-2xl font-bold text-center text-gray-900">
           {isNewUser ? "Create an Account" : "Log In to Your Account"}
         </h2>
+
+        {message && (
+          <div
+            className={`p-3 rounded-md text-sm ${
+              messageType === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Email Input */}
           <div>
@@ -40,7 +103,12 @@ const Login = ({ setUser, setUserRole }) => {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setMessage(""); 
+                setMessageType("");
+              }}
+
               required
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="you@example.com"
@@ -56,7 +124,11 @@ const Login = ({ setUser, setUserRole }) => {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setMessage("");
+                setMessageType("");
+              }}
               required
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="••••••••"
@@ -76,8 +148,11 @@ const Login = ({ setUser, setUserRole }) => {
         <p className="text-sm text-center text-gray-600">
           {isNewUser ? "Already have an account?" : "New user?"}{" "}
           <button
-            onClick={() => setIsNewUser(!isNewUser)}
-            className="font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none"
+            onClick={() => {
+              setIsNewUser(!isNewUser);
+              setMessage(""); 
+              setMessageType("");
+            }}
           >
             {isNewUser ? "Login here" : "Sign Up now"}
           </button>

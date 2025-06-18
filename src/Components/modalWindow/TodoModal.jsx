@@ -45,9 +45,9 @@ function TodoModal({ isOpen, onAddTask, onClose }) {
   };
   
   // Don't render if not open
-  // if (!isOpen) {
-  //   return null;
-  // }
+  if (!isOpen) {
+    return null;
+  }
 
   const isSaveDisabled = !taskData.title.trim();
 
